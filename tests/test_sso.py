@@ -777,6 +777,10 @@ class PainelDeVerdade(unittest.TestCase):
             urllib.parse.urlsplit(cabecalhos["Location"]).query
         )
         self.assertEqual(consulta["code_challenge_method"], ["S256"])
+        cookie_de_estado = sessao.ler_estado_do_cabecalho(cabecalhos["Set-Cookie"])
+        estado = sessao.ler_estado_sso(cookie_de_estado)
+        self.assertIsNotNone(estado)
+        self.assertEqual(consulta["code_challenge"], [sso.desafio_de(estado["verificador"])])
         self.assertEqual(
             consulta["redirect_uri"], [f"{self.base_url}/sso/oidc/callback"]
         )
@@ -1210,6 +1214,16 @@ class SamlNoModuloEAindaSemRota(unittest.TestCase):
 
 class NovosRecursosDeSSO(unittest.TestCase):
     """Testa conexão OIDC/SAML, modo simultâneo (both), salvaguarda anti-lockout e desativação de senha."""
+
+    def test_campos_dos_dois_protocolos_ficam_fora_das_abas(self):
+        from nine_rtksync.render import render_sso_modal
+
+        modal = render_sso_modal({"saml_disponivel": True}, "pt")
+        antes_das_abas, _, abas = modal.partition('<ul class="nav nav-tabs')
+        for campo in ("base_url", "allowed_domains", "allowed_emails"):
+            seletor = f'name="{campo}"'
+            self.assertIn(seletor, antes_das_abas)
+            self.assertNotIn(seletor, abas)
 
     def test_teste_de_conexao_oidc_sem_emissor(self):
         ok, msg = sso.testar_conexao_oidc("")

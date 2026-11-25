@@ -19,6 +19,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+import threading
 import time
 from typing import Optional
 
@@ -31,6 +32,13 @@ VALIDADE_EM_SEGUNDOS = 8 * 60 * 60
 VALIDADE_DO_ESTADO_EM_SEGUNDOS = 600
 
 _SEGREDO = secrets.token_bytes(32)
+BLOQUEIO_CREDENCIAIS = threading.Lock()
+
+
+def invalidar_sessoes() -> None:
+    """Descarta cookies emitidos antes de uma troca de credenciais."""
+    global _SEGREDO
+    _SEGREDO = secrets.token_bytes(32)
 
 
 def _assina(carga: str) -> str:

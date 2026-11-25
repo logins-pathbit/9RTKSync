@@ -1,0 +1,11 @@
+name: rtksync-saml-example
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.5.6
+    command: [start-dev, "--hostname=http://localhost:19557", --import-realm]
+    ports:
+      - "127.0.0.1:19557:8080"
+    environment:
+      SAML_EXAMPLE_PASSWORD: ${SAML_EXAMPLE_PASSWORD:?defina a senha do laboratório}
+    volumes:
+      - ./rtksync-lab-realm.json:/opt/keycloak/data/import/rtksync-lab-realm.json:ro

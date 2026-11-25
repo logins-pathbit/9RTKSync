@@ -52,7 +52,8 @@ def print_status_table(settings: Settings):
 
     for cb in combos:
         models = cb.get("models", [])
-        print(f"  {cb['name']:<26} {cb['kind']:<12} {len(models)}: {', '.join(models[:3])}{'...' if len(models) > 3 else ''}")
+        kind = cb["kind"] or "-"
+        print(f"  {cb['name']:<26} {kind:<12} {len(models)}: {', '.join(models[:3])}{'...' if len(models) > 3 else ''}")
 
     print("\n" + "=" * 76 + "\n")
 

@@ -79,6 +79,23 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(conns[0].data["apiKey"], "dummy_key_2")
         self.assertEqual(conns[0].data["testStatus"], "ok")
 
+    def test_upsert_fills_auth_type_in_current_schema(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("ALTER TABLE providerConnections ADD COLUMN authType TEXT NOT NULL")
+        for provider, fields, expected in [
+            ("antigravity", {"refreshToken": "fixture"}, "oauth"),
+            ("groq", {"apiKey": "fixture"}, "apikey"),
+        ]:
+            with self.subTest(provider=provider):
+                conn_id = f"test-{provider}"
+                self.assertEqual(upsert_connection(self.db_path, provider, provider, fields, conn_id), conn_id)
+                self.assertEqual(upsert_connection(self.db_path, provider, provider, fields, conn_id), conn_id)
+                with sqlite3.connect(self.db_path) as conn:
+                    self.assertEqual(
+                        conn.execute("SELECT authType FROM providerConnections WHERE id = ?", (conn_id,)).fetchone(),
+                        (expected,),
+                    )
+
     def test_upsert_combos_no_unique_constraint_violation(self):
         # Simulate initial insertion with combo_arsenal_supremo
         combos_list = [
