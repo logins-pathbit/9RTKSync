@@ -27,7 +27,7 @@ DO_GATEWAY = {"INITIAL_PASSWORD", "JWT_SECRET", "REQUIRE_API_KEY", "REQUIRE_LOGI
 # acesso remoto (perfis `tunel` e `tailnet`). Precisam estar anunciadas no
 # exemplo -- é lá que o operador descobre que existem -- mas nenhum os.environ
 # daqui as procura, e é isso que a varredura acima mede.
-DO_COMPOSE = {"TUNNEL_TOKEN", "TS_AUTHKEY"}
+DO_COMPOSE = {"ENABLE_SAML", "TUNNEL_TOKEN", "TS_AUTHKEY"}
 
 LEITURA = re.compile(r'os\.(?:environ\.get|getenv)\(\s*["\']([A-Z0-9_]+)["\']')
 INDICE = re.compile(r'os\.environ\[\s*["\']([A-Z0-9_]+)["\']')

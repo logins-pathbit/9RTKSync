@@ -22,6 +22,7 @@ import json
 import os
 import sqlite3
 import threading
+import uuid
 import time
 import urllib.error
 import urllib.request
@@ -109,35 +110,40 @@ def upsert_connection(
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     try:
         cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
         data_str = json.dumps(data)
 
-        # Look up by ID or by provider
-        target_id = connection_id
-        if not target_id:
+        if connection_id:
+            cursor.execute("SELECT id FROM providerConnections WHERE id = ?", (connection_id,))
+        else:
             cursor.execute("SELECT id FROM providerConnections WHERE provider = ?", (provider,))
-            row = cursor.fetchone()
-            if row:
-                target_id = row["id"]
+        row = cursor.fetchone()
 
-        if target_id:
+        if row:
             cursor.execute(
                 "UPDATE providerConnections SET name = ?, data = ?, updatedAt = ? WHERE id = ?",
-                (name, data_str, now_iso, target_id),
+                (name, data_str, now_iso, row["id"]),
             )
             conn.commit()
-            return target_id
-        else:
-            import uuid
-            new_id = str(uuid.uuid4())
-            cursor.execute(
-                """
-                INSERT INTO providerConnections (id, provider, name, data, createdAt, updatedAt)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (new_id, provider, name, data_str, now_iso, now_iso),
+            return row["id"]
+
+        new_id = connection_id or str(uuid.uuid4())
+        columns = ["id", "provider", "name", "data", "createdAt", "updatedAt"]
+        values = [new_id, provider, name, data_str, now_iso, now_iso]
+        schema = {r["name"] for r in cursor.execute("PRAGMA table_info(providerConnections)")}
+        if "authType" in schema:
+            auth_type = data.get("authType") or (
+                "oauth" if data.get("accessToken") or data.get("refreshToken") else "apikey"
             )
-            conn.commit()
-            return new_id
+            columns.append("authType")
+            values.append(auth_type)
+        cursor.execute(
+            f"INSERT INTO providerConnections ({', '.join(columns)}) "
+            f"VALUES ({', '.join('?' for _ in values)})",
+            values,
+        )
+        conn.commit()
+        return new_id
     finally:
         conn.close()
 

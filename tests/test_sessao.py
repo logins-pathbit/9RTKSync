@@ -18,6 +18,13 @@ class CookieDeSessao(unittest.TestCase):
         valor = sessao.emitir("admin")
         self.assertEqual(sessao.usuario_da_sessao(valor), "admin")
 
+    def test_troca_de_credenciais_invalida_sessoes_anteriores(self):
+        sessoes = [sessao.emitir("admin"), sessao.emitir("sso:operador@example.test")]
+        sessao.invalidar_sessoes()
+        for sessao_anterior in sessoes:
+            self.assertIsNone(sessao.usuario_da_sessao(sessao_anterior))
+        self.assertEqual(sessao.usuario_da_sessao(sessao.emitir("admin")), "admin")
+
     def test_cookie_adulterado_nao_vale(self):
         """Trocar o usuário dentro do cookie tem de invalidar a assinatura."""
         valor = sessao.emitir("admin")

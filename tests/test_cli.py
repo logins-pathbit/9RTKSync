@@ -34,7 +34,7 @@ class TestCLI(unittest.TestCase):
             CREATE TABLE combos (
                 id TEXT PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL,
-                kind TEXT NOT NULL,
+                kind TEXT,
                 models TEXT NOT NULL,
                 createdAt TEXT NOT NULL,
                 updatedAt TEXT NOT NULL
@@ -63,6 +63,20 @@ class TestCLI(unittest.TestCase):
         self.assertIn("9RTKSYNC · 9ROUTER CONNECTIONS AND COMBOS STATUS", output)
         self.assertIn("antigravity", output)
         self.assertIn("Google Antigravity Pro", output)
+
+    def test_print_status_table_for_combo_without_kind(self):
+        with sqlite3.connect(self.db_path) as database:
+            database.execute(
+                "INSERT INTO combos VALUES (?, ?, ?, ?, ?, ?)",
+                ("combo-local", "Combo local", None, '["local/model"]', "", ""),
+            )
+
+        output = io.StringIO()
+        with patch("sys.stdout", output):
+            print_status_table(Settings(db_path=self.db_path))
+
+        self.assertIn("Combo local", output.getvalue())
+        self.assertIn("1: local/model", output.getvalue())
 
     def test_cli_once(self):
         f = io.StringIO()

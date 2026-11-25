@@ -47,10 +47,16 @@ services:
       start_period: 45s
 
   9rtk-test-sync:
-    build: .
+    build:
+      context: .
+      args:
+        ENABLE_SAML: ${ENABLE_SAML:-0}
     image: ghcr.io/pathbit/9rtksync:local
     container_name: 9rtk-test-sync
     hostname: 9rtk-test-sync
+    # O 9Router escreve como node (UID 1000). Ambos criam arquivos no mesmo
+    # volume e precisam preservar a capacidade de escrita do gateway.
+    user: "1000:1000"
     networks:
       - 9rtksync-test-net
     restart: unless-stopped

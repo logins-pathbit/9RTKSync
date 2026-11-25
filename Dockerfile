@@ -17,6 +17,14 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/opt/venv"
 
+# Build opcional para o painel atuar como Service Provider SAML 2.0.
+# As versões de lxml e xmlsec abaixo usam a mesma libxml2 em ARM64 e AMD64.
+ARG ENABLE_SAML=0
+RUN if [ "$ENABLE_SAML" = "1" ]; then \
+      pip install --no-cache-dir --only-binary=:all: python3-saml==1.16.0 lxml==6.1.3 xmlsec==1.3.18 && \
+      python -c "from onelogin.saml2.auth import OneLogin_Saml2_Auth"; \
+    fi
+
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/src
 ENV DB_PATH=/app/data/db/data.sqlite

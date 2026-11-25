@@ -1,0 +1,99 @@
+{
+  "realm": "rtksync-lab",
+  "enabled": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "http://127.0.0.1:19091/sso/saml/metadata",
+      "name": "RTKSync nine",
+      "enabled": true,
+      "protocol": "saml",
+      "redirectUris": [
+        "http://127.0.0.1:19091/sso/saml/acs"
+      ],
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.authnstatement": "true",
+        "saml.force.post.binding": "true",
+        "saml_name_id_format": "email",
+        "saml_force_name_id_format": "true",
+        "saml_assertion_consumer_url_post": "http://127.0.0.1:19091/sso/saml/acs"
+      }
+    },
+    {
+      "clientId": "http://127.0.0.1:19092/sso/saml/metadata",
+      "name": "RTKSync omni",
+      "enabled": true,
+      "protocol": "saml",
+      "redirectUris": [
+        "http://127.0.0.1:19092/sso/saml/acs"
+      ],
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.authnstatement": "true",
+        "saml.force.post.binding": "true",
+        "saml_name_id_format": "email",
+        "saml_force_name_id_format": "true",
+        "saml_assertion_consumer_url_post": "http://127.0.0.1:19092/sso/saml/acs"
+      }
+    },
+    {
+      "clientId": "http://127.0.0.1:9093/sso/saml/metadata",
+      "name": "RTKSync lite",
+      "enabled": true,
+      "protocol": "saml",
+      "redirectUris": [
+        "http://127.0.0.1:9093/sso/saml/acs"
+      ],
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.authnstatement": "true",
+        "saml.force.post.binding": "true",
+        "saml_name_id_format": "email",
+        "saml_force_name_id_format": "true",
+        "saml_assertion_consumer_url_post": "http://127.0.0.1:9093/sso/saml/acs"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "operador",
+      "enabled": true,
+      "firstName": "operador",
+      "lastName": "Laboratorio",
+      "email": "operador@example.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${SAML_EXAMPLE_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "visitante",
+      "enabled": true,
+      "firstName": "visitante",
+      "lastName": "Laboratorio",
+      "email": "visitante@example.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${SAML_EXAMPLE_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

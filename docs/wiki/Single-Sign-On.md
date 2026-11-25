@@ -19,19 +19,11 @@ today, signed by the same per-process secret in
 | | Status |
 |---|---|
 | OIDC sign-in (discovery, PKCE, code exchange, userinfo, allowlist) | **Implemented**, no external dependency |
-| SAML2 configuration tab | **Shown, disabled**, with the reason on screen |
-| SAML2 sign-in (assertion validation) | **Not implemented** — needs `python3-saml`, see the last section |
+| SAML2 configuration tab | Available with the optional SAML build |
+| SAML2 sign-in (assertion validation) | Validates signed responses with the optional `python3-saml` dependency |
 | Federated sign-out (single logout) | **Out of scope** |
 
-The honest reason for the split: SAML2 signs over exclusive canonicalisation
-1.0, and the standard library's `canonicalize` implements a different algorithm;
-there is no RSA verification in the standard library; and defending against a
-signed assertion moved elsewhere in the document tree requires the code that
-checks the signature to also check that the validated element is the one that
-was read. That is library work, and the library is not in the image. Shipping a
-hand-rolled version of it would be worse than shipping nothing, because a
-wrongly canonicalised signature check is one relaxation away from accepting a
-forged assertion.
+The optional dependency handles XML canonicalization and signature verification.
 
 ---
 
@@ -171,23 +163,19 @@ Two details that are decisions, not accidents:
 
 ---
 
-## What the SAML2 phase needs
+## SAML 2.0
 
-The configuration tab is already drawn and translated, and it stays disabled
-until the library is in the image. Adding it means changing the Dockerfile of
-all three panels — which is why it is a separate phase:
+The panel uses the Python `saml` extra. Build the container with the extra from the repository root.
 
-```
-RUN apk add --no-cache libxml2 libxslt xmlsec && \
-    apk add --no-cache --virtual .build gcc musl-dev libxml2-dev libxslt-dev xmlsec-dev pkgconfig && \
-    pip install --no-cache-dir --no-binary lxml,xmlsec python3-saml && \
-    apk del .build
+```bash
+docker build --build-arg ENABLE_SAML=1 -t 9rtksync:saml .
 ```
 
-Building the two extensions from source is not optional: the published wheels of
-`lxml` and `xmlsec` embed different versions of the same XML library, and the
-mismatch surfaces at runtime, not at install time. The extra is already declared
-as `saml` in `pyproject.toml`, so `pip install .[saml]` is enough outside Docker.
+Set `image: 9rtksync:saml` for the sync service in Compose. The standard image offers OIDC.
+
+The [Docker Keycloak example](https://github.com/pathbit/9RTKSync/tree/master/examples/saml-keycloak) registers all three test panels. In that example, the realm descriptor is at `http://localhost:19557/realms/rtksync-lab/protocol/saml/descriptor`.
+
+In Keycloak, create a SAML client with the panel entity ID at `/sso/saml/metadata` and the POST endpoint at `/sso/saml/acs`. Enable signatures for both the response and assertion, use an email-format NameID and leave the assertion unencrypted. Disable **Client signature required** for this client. The panel sends its AuthnRequest over HTTP-Redirect. Copy the IdP entity ID, HTTP-Redirect SSO URL and signing certificate from the realm descriptor. Enter them in the panel along with its base URL and the email or domain allowlist. Authenticated operators can download the SP metadata.
 
 ---
 
@@ -207,18 +195,11 @@ assinado pelo mesmo segredo de processo de `sessao.py`.
 | | Situação |
 |---|---|
 | Entrada por OIDC (descoberta, PKCE, troca do código, perfil, lista de permissão) | **Pronta**, sem dependência externa |
-| Aba de configuração SAML2 | **Aparece, desabilitada**, com o motivo na tela |
-| Entrada por SAML2 (validação da asserção) | **Não implementada** — exige `python3-saml` |
+| Aba de configuração SAML2 | Disponível no build opcional com SAML |
+| Entrada por SAML2 (validação da asserção) | Valida respostas assinadas com a dependência opcional `python3-saml` |
 | Saída federada (logout no provedor) | **Fora de escopo** |
 
-O motivo honesto da divisão: a assinatura do SAML2 é sobre canonicalização
-exclusiva 1.0, e o `canonicalize` da biblioteca padrão implementa outro
-algoritmo; não há verificação RSA na biblioteca padrão; e defender-se de uma
-asserção assinada deslocada dentro da árvore exige que quem confere a assinatura
-confira também que o elemento validado é o mesmo que foi lido. Isso é trabalho
-de biblioteca, e a biblioteca não está na imagem. Entregar uma versão artesanal
-disso seria pior que não entregar nada: uma canonicalização errada está a uma
-"correção" de distância de aceitar uma asserção forjada.
+A dependência opcional trata a canonicalização e a verificação da assinatura XML.
 
 ## A regra, de ponta a ponta
 
@@ -342,12 +323,16 @@ Dois detalhes que são decisão, e não acaso:
   entrada com uma sessão perfeitamente válida no bolso. Nenhum parâmetro da volta
   vira destino; ele é sempre `/`.
 
-## O que a fase do SAML2 exige
+## SAML 2.0 no painel
 
-A aba de configuração já está desenhada e traduzida, e fica desabilitada até a
-biblioteca entrar na imagem. Pô-la lá significa mudar o Dockerfile dos três
-painéis — e é por isso que é uma fase separada. O bloco está na versão em inglês,
-logo acima. Compilar as duas extensões a partir do fonte não é opcional: os
-pacotes prontos de `lxml` e de `xmlsec` embutem versões diferentes da mesma
-biblioteca de XML, e o desencontro aparece em tempo de execução, não na
-instalação. O extra já está declarado como `saml` no `pyproject.toml`.
+O painel usa o extra `saml` do Python. Para ativá-lo no contêiner, execute na raiz:
+
+```bash
+docker build --build-arg ENABLE_SAML=1 -t 9rtksync:saml .
+```
+
+No serviço do sincronizador do Compose, use `image: 9rtksync:saml`. A imagem padrão mantém apenas a opção OIDC.
+
+O [exemplo Keycloak em Docker](https://github.com/pathbit/9RTKSync/tree/master/examples/saml-keycloak) registra os três painéis de teste. Nesse exemplo, o descritor do realm está em `http://localhost:19557/realms/rtksync-lab/protocol/saml/descriptor`.
+
+No Keycloak, crie um cliente SAML com o Entity ID do painel em `/sso/saml/metadata` e a URL de POST em `/sso/saml/acs`. Habilite a assinatura da resposta e da asserção, selecione NameID no formato e-mail e deixe a asserção sem criptografia. Desative **Client signature required** nesse cliente. O painel envia a AuthnRequest por HTTP-Redirect. Copie do descritor público do realm o Entity ID, a URL de SSO HTTP-Redirect e o certificado de assinatura. No painel, preencha esses campos, a URL base e a lista de e-mails ou domínios permitidos. O painel disponibiliza os metadados do SP a operadores autenticados.

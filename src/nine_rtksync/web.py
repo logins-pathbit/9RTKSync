@@ -657,7 +657,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if atraso:
             time.sleep(atraso)
 
-        if not self.settings or not self.settings.verify_credentials(usuario, senha):
+        # Um login iniciado com a senha anterior não pode emitir um
+        # cookie assinado com o segredo posterior à troca.
+        with sessao.BLOQUEIO_CREDENCIAIS:
+            credencial_valida = self.settings and self.settings.verify_credentials(usuario, senha)
+            cookie = sessao.emitir(usuario) if credencial_valida else None
+        if cookie is None:
             # Mensagem única para usuário errado e senha errada: distinguir os
             # dois conta a quem tenta qual metade já acertou.
             protecao.anota_falha(endereco)
@@ -669,7 +674,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.send_header("Location", "/")
         seguro = self.eh_conexao_segura()
         self.send_header(
-            "Set-Cookie", sessao.cabecalho_para_gravar(sessao.emitir(usuario), seguro=seguro)
+            "Set-Cookie", sessao.cabecalho_para_gravar(cookie, seguro=seguro)
         )
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", "0")
@@ -842,10 +847,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         state = secrets.token_urlsafe(32)
         nonce = secrets.token_urlsafe(32)
-        verificador = sso.novo_verificador()
+        verificador, desafio = sso.novo_desafio_pkce()
         self.send_response(HTTPStatus.FOUND)
         self.send_header(
-            "Location", sso.url_de_autorizacao(cfg_obj, documento, state, nonce, verificador)
+            "Location", sso.url_de_autorizacao(cfg_obj, documento, state, nonce, desafio)
         )
         seguro = self.eh_conexao_segura()
         self.send_header(
@@ -1305,6 +1310,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             f'{"ONLINE" if online else translate("gateway.no_response", lang)}',
         )
 
+    def salvar_credenciais(self, usuario: str, senha: str) -> bool:
+        with sessao.BLOQUEIO_CREDENCIAIS:
+            if not self.settings or not self.settings.update_auth_credentials(usuario, senha):
+                return False
+            sessao.invalidar_sessoes()
+            return True
+
     def handle_credentials(self, campos: Dict[str, List[str]]) -> None:
         """Troca usuário e senha do painel, com a política de força inteira."""
         lang = self.resolve_language()
@@ -1324,7 +1336,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # de ir para a tela, e as etiquetas <code> apareceriam cruas ali.
             self.redirect_to_dashboard("warning", strip_markup(translate("auth.env_managed", lang)))
             return
-        if self.settings and self.settings.update_auth_credentials(user, password):
+        if self.salvar_credenciais(user, password):
             self.send_response(HTTPStatus.SEE_OTHER)
             self.send_header("Location", "/credenciais-atualizadas")
             self.send_header("Content-Length", "0")
@@ -1596,7 +1608,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 strip_markup(translate("auth.env_managed", lang)), HTTPStatus.CONFLICT
             )
             return
-        if self.settings and self.settings.update_auth_credentials(novo_usuario, nova_senha):
+        if self.salvar_credenciais(novo_usuario, nova_senha):
             self.respond_json(
                 json.dumps(
                     {"success": True, "newUser": novo_usuario}, ensure_ascii=False
